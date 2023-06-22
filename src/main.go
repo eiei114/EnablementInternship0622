@@ -1,122 +1,89 @@
-// package main
-//
-// import (
-//
-//	"fmt"
-//	"io/ioutil"
-//	"regexp"
-//	"runtime"
-//	"strings"
-//	"time"
-//
-// )
-//
-//	type Goroutine struct {
-//		ID       string
-//		Status   string
-//		ParentID string
-//	}
-//
-// var relationships []string
-//
-//	func parseGoroutines(stack string) []Goroutine {
-//		common := regexp.MustCompile(`goroutine (\d+) \[(\w+)\]:`)
-//		child := regexp.MustCompile(`created by .+ in goroutine (\d+)`)
-//
-//		lines := strings.Split(stack, "\n")
-//		var goroutines []Goroutine
-//		var lastGoroutine *Goroutine
-//
-//		for _, line := range lines {
-//			if match := common.FindStringSubmatch(line); match != nil {
-//				g := Goroutine{
-//					ID:     match[1],
-//					Status: match[2],
-//				}
-//				goroutines = append(goroutines, g)
-//				lastGoroutine = &goroutines[len(goroutines)-1]
-//			} else if match := child.FindStringSubmatch(line); match != nil && lastGoroutine != nil {
-//				lastGoroutine.ParentID = match[1]
-//			}
-//		}
-//
-//		return goroutines
-//	}
-//
-//	func writeDotFile(fileName string) {
-//		lines := []string{"digraph G {"}
-//		lines = append(lines, relationships...)
-//		lines = append(lines, "}")
-//
-//		ioutil.WriteFile(fileName, []byte(strings.Join(lines, "\n")), 0644)
-//	}
-//
-// func main() {
-//
-//		go func() {
-//			time.Sleep(1 * time.Second)
-//		}()
-//
-//		go func() {
-//			time.Sleep(1 * time.Second)
-//		}()
-//
-//		go func() {
-//			time.Sleep(1 * time.Second)
-//			go func() {
-//				time.Sleep(1 * time.Second)
-//				go func() {
-//					time.Sleep(1 * time.Second)
-//				}()
-//			}()
-//		}()
-//
-//		timer := time.NewTimer(20 * time.Second)
-//
-//		buf := make([]byte, 1024)
-//		for {
-//			select {
-//			case <-timer.C:
-//				writeDotFile("goroutines.dot") // Write the .dot file here.
-//				return
-//			default:
-//				n := runtime.Stack(buf, true)
-//				goroutines := parseGoroutines(string(buf[:n]))
-//				for _, g := range goroutines {
-//					fmt.Printf("Goroutine ID: %s, Status: %s, Parent ID: %s\n", g.ID, g.Status, g.ParentID)
-//					if g.ParentID != "" {
-//						relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
-//					}
-//				}
-//				time.Sleep(5 * time.Second)
-//			}
-//		}
-//	}
 package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"regexp"
 	"runtime"
+	"strings"
 	"time"
 )
 
-func main() {
-	go func() {
-		time.Sleep(1 * time.Second)
-		go func() {
-			bof := make([]byte, 1024)
-			n := runtime.Stack(bof, true) // すべてのゴルーチンのスタックトレースを取得
-			fmt.Printf("=== Test ===\n%s\n", bof[:n])
-			time.Sleep(1 * time.Second)
-		}()
-	}()
+type Goroutine struct {
+	ID       string
+	Status   string
+	ParentID string
+}
 
-	buf := make([]byte, 1024)
-	for {
-		n := runtime.Stack(buf, true) // すべてのゴルーチンのスタックトレースを取得
-		fmt.Printf("=== Stack trace ===\n%s\n", buf[:n])
-		time.Sleep(5 * time.Second) // 5秒ごとにスタックトレースを取得
+var relationships []string
+
+func parseGoroutines(stack string) []Goroutine {
+	common := regexp.MustCompile(`goroutine (\d+) \[(\w+)\]:`)
+	child := regexp.MustCompile(`created by .+ in goroutine (\d+)`)
+
+	lines := strings.Split(stack, "\n")
+	var goroutines []Goroutine
+	var lastGoroutine *Goroutine
+
+	for _, line := range lines {
+		if match := common.FindStringSubmatch(line); match != nil {
+			g := Goroutine{
+				ID:     match[1],
+				Status: match[2],
+			}
+			goroutines = append(goroutines, g)
+			lastGoroutine = &goroutines[len(goroutines)-1]
+		} else if match := child.FindStringSubmatch(line); match != nil && lastGoroutine != nil {
+			lastGoroutine.ParentID = match[1]
+		}
 	}
+
+	return goroutines
+}
+
+func writeDotFile(fileName string) {
+	lines := []string{"digraph G {"}
+	lines = append(lines, relationships...)
+	lines = append(lines, "}")
+
+	ioutil.WriteFile(fileName, []byte(strings.Join(lines, "\n")), 0644)
+}
+
+func GatherAndWriteGoroutines() {
+	timer := time.NewTimer(20 * time.Second)
+	buf := make([]byte, 8192)
+
+	for {
+		select {
+		case <-timer.C:
+			writeDotFile("goroutines.dot")
+			return
+		default:
+			n := runtime.Stack(buf, true)
+			goroutines := parseGoroutines(string(buf[:n]))
+			for _, g := range goroutines {
+				fmt.Printf("Goroutine ID: %s, Status: %s, Parent ID: %s\n", g.ID, g.Status, g.ParentID)
+				if g.ParentID != "" {
+					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+				}
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}
+}
+
+func main() {
+	for i := 1; i <= 10; i++ {
+		go func() {
+			time.Sleep(1 * time.Second)
+			go func() {
+				time.Sleep(1 * time.Second)
+
+			}()
+		}()
+	}
+
+	GatherAndWriteGoroutines()
 }
 
 //必要な情報
