@@ -8,9 +8,6 @@
 
 ## Implementation
 ```bash
-$ cd src
-```
-```bash
 $ go run main.go
 ```
 ## Result
