@@ -22,4 +22,4 @@ digraph G {
 }
 ```
 .dot -> png
-![goroutines.png](src%2Fgoroutines.png)
+![goroutines.png](goroutines.png)
