@@ -64,11 +64,17 @@ func GatherAndWriteGoroutines() {
 			goroutines := parseGoroutines(string(buf[:n]))
 			for _, g := range goroutines {
 				fmt.Printf("Goroutine ID: %s, Status: %s, Parent ID: %s\n", g.ID, g.Status, g.ParentID)
-				if g.ParentID != "" {
+				if g.Status == "chan send" {
+					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = red];", g.ID, g.ParentID, g.Status))
+					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+				} else if g.Status == "chan receive" {
+					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = blue];", g.ParentID, g.ID, g.Status))
+					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+				} else if g.ParentID != "" {
 					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
 				}
+				time.Sleep(5 * time.Second)
 			}
-			time.Sleep(5 * time.Second)
 		}
 	}
 }
