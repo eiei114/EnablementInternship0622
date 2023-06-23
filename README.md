@@ -1,4 +1,5 @@
 ## 可視化ツール
+- https://zenn.dev/keisuke114/scraps/2601779b90d9be
 - goroutineの親子関係を可視化するツール
 - `dotファイル`として出力されるので`grahviz`を用いて画像に変換する
 
