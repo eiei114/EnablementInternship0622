@@ -11,12 +11,18 @@
 ```bash
 $ go run main.go
 ```
+```bash
+$ dot -Tpng goroutines.dot -o goroutines.png
+```
+
 ## Result
 ```dot
 digraph G {
-"1" -> "6";
-"1" -> "7";
-"1" -> "8";
+    "6" -> "1" [label = "chan send" color = red];
+    "1" -> "6";
+    "7" -> "1" [label = "chan send" color = red];
+    "1" -> "7";
+    "1" -> "8";
 }
 ```
 .dot -> png
