@@ -18,7 +18,7 @@ type Goroutine struct {
 var relationships []string
 
 func parseGoroutines(stack string) []Goroutine {
-	common := regexp.MustCompile(`goroutine (\d+) \[(\w+)\]:`)
+	common := regexp.MustCompile(`goroutine (\d+) \[(.+)\]:`)
 	child := regexp.MustCompile(`created by .+ in goroutine (\d+)`)
 
 	lines := strings.Split(stack, "\n")
@@ -60,6 +60,7 @@ func GatherAndWriteGoroutines() {
 			return
 		default:
 			n := runtime.Stack(buf, true)
+			//fmt.Printf("=== Stack trace ===\n%s\n", buf[:n])
 			goroutines := parseGoroutines(string(buf[:n]))
 			for _, g := range goroutines {
 				fmt.Printf("Goroutine ID: %s, Status: %s, Parent ID: %s\n", g.ID, g.Status, g.ParentID)
@@ -67,7 +68,7 @@ func GatherAndWriteGoroutines() {
 					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
 				}
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
