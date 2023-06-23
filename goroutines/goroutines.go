@@ -15,7 +15,7 @@ type Goroutine struct {
 	ParentID string
 }
 
-var relationships []string
+var relationships map[string]bool
 
 func parseGoroutines(stack string) []Goroutine {
 	common := regexp.MustCompile(`goroutine (\d+) \[(.+)\]:`)
@@ -43,37 +43,49 @@ func parseGoroutines(stack string) []Goroutine {
 
 func writeDotFile(fileName string) {
 	lines := []string{"digraph G {"}
-	lines = append(lines, relationships...)
+	for relationship := range relationships {
+		lines = append(lines, relationship)
+	}
 	lines = append(lines, "}")
 
 	ioutil.WriteFile(fileName, []byte(strings.Join(lines, "\n")), 0644)
 }
 
 func GatherAndWriteGoroutines() {
+	relationships = make(map[string]bool)
+
 	timer := time.NewTimer(20 * time.Second)
 	buf := make([]byte, 8192)
 
 	for {
 		select {
 		case <-timer.C:
-			writeDotFile("goroutines.dot")
+			writeDotFile("goroutines2.dot")
+			fmt.Println("Done!!")
 			return
 		default:
 			n := runtime.Stack(buf, true)
-			//fmt.Printf("=== Stack trace ===\n%s\n", buf[:n])
+			fmt.Printf("=== Stack trace ===\n%s\n", buf[:n])
+
 			goroutines := parseGoroutines(string(buf[:n]))
+
 			for _, g := range goroutines {
-				fmt.Printf("Goroutine ID: %s, Status: %s, Parent ID: %s\n", g.ID, g.Status, g.ParentID)
+				relationship := ""
 				if g.Status == "chan send" {
-					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = red];", g.ID, g.ParentID, g.Status))
-					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+					relationship = fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = red];", g.ID, g.ParentID, g.Status)
+					relationships[relationship] = true
+					relationship = fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID)
+					relationships[relationship] = true
 				} else if g.Status == "chan receive" {
-					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = blue];", g.ParentID, g.ID, g.Status))
-					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+					relationship = fmt.Sprintf("\"%s\" -> \"%s\" [label = \"%s\" color = blue];", g.ParentID, g.ID, g.Status)
+					relationships[relationship] = true
+					relationship = fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID)
+					relationships[relationship] = true
 				} else if g.ParentID != "" {
-					relationships = append(relationships, fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID))
+					relationship = fmt.Sprintf("\"%s\" -> \"%s\";", g.ParentID, g.ID)
+					relationships[relationship] = true
 				}
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Millisecond)
 			}
 		}
 	}

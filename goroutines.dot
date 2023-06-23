@@ -1,7 +1,14 @@
 digraph G {
-"6" -> "1" [label = "chan send" color = red];
+"1" -> "11";
 "1" -> "6";
+"1" -> "8";
+"1" -> "9" [label = "chan receive" color = blue];
+"1" -> "10" [label = "chan receive" color = blue];
+"1" -> "10";
+"8" -> "1" [label = "chan send" color = red];
+"6" -> "1" [label = "chan send" color = red];
 "7" -> "1" [label = "chan send" color = red];
 "1" -> "7";
-"1" -> "8";
+"1" -> "9";
+"1" -> "11" [label = "chan receive" color = blue];
 }
